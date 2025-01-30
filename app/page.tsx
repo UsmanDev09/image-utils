@@ -9,6 +9,11 @@ import { getModelInfo } from "@/utils/get-model-info";
 import { isMobileSafari } from "@/utils/is-mobile-safari";
 import Image from "next/image";
 import useAppShell from "@/store/use-app-shell";
+import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import ColorPicker from "./components/ColorPicker";
+import { Check } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import { Sparkles, Upload, Lock, Wifi } from "lucide-react";
 
 interface AppError {
   message: string;
@@ -27,6 +32,24 @@ const sampleImages = [
   "https://images.unsplash.com/photo-1513013156887-d2bf241c8c82?q=80&w=2970&auto=format&fit=crop&ixlib=rb-4.0.3",
   "https://images.unsplash.com/photo-1643490745745-e8ca9a3a1c90?q=80&w=2874&auto=format&fit=crop&ixlib=rb-4.0.3",
   "https://images.unsplash.com/photo-1574158622682-e40e69881006?q=80&w=2333&auto=format&fit=crop&ixlib=rb-4.0.3"
+];
+
+const features = [
+  {
+    icon: <Lock className="w-6 h-6" />,
+    title: "100% Private",
+    description: "All processing happens locally on your device. No data ever leaves your browser."
+  },
+  {
+    icon: <Wifi className="w-6 h-6" />,
+    title: "Offline Support",
+    description: "Works without internet once loaded. Perfect for processing sensitive images."
+  },
+  {
+    icon: <Sparkles className="w-6 h-6" />,
+    title: "Single click background removal",
+    description: "Compress images and videos while maintaining quality."
+  }
 ];
 
 
@@ -173,89 +196,94 @@ export default function App() {
   }
 
   return (
-    <div className="min-h-screen ">
+    <div className="min-h-screen">
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className={`grid gap-8 ${images.length === 0 ? 'grid-cols-2' : 'grid-cols-1'}`}>
-            {/* Image upload */}
-            <div className="flex flex-col gap-2">                            
-              <div className="flex h-[200px] gap-2 border-[hsl(0,0,17)]">
-                <label
-                  htmlFor="image"
-                  className="group relative flex w-[600px] h-full cursor-pointer flex-col items-center justify-center rounded-md border border-gray  shadow-sm transition-all "
-                >
-                  <div
-                    {...getRootProps()}
-                    className="z-[5] rounded-md flex h-full w-full items-center justify-center border-2 border-[hsl(0,0,17)]"                     
-                  >
-                    <input {...getInputProps()} className="hidden" />
-                    <div className={`
-                      absolute z-[3] w-full h-full flex flex-col items-center opacity-100 justify-center rounded-md bg-black border-[hsl(0,0,17)] transition-all 
-                      ${isDragAccept ? "border-green-500 bg-green-50" : ""}
-                      ${isDragReject ? "border-red-500 bg-red-50" : ""}
-                      ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"}                        
-                    `}>
-                      <svg
-                        fill="none"
-                        shapeRendering="geometricPrecision"
-                        stroke="currentColor"
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth="1.5"
-                        viewBox="0 0 24 24"
-                        width="24"
-                        height="24"
-                        className={`${
-                          isDragActive ? "scale-110" : "scale-100"
-                        } h-7 w-7 text-gray-500 transition-all duration-75 group-hover:scale-110 group-active:scale-95 opacity-80`}                                                >
-                        <path d="M16 16l-4-4-4 4" />
-                        <path d="M12 12v9" />
-                        <path d="M20.39 18.39A5 5 0 0018 9h-1.26A8 8 0 103 16.3" />
-                        <path d="M16 16l-4-4-4 4" />
-                      </svg>
-                      <p className="mt-2 text-center text-md text-white">
-                          Drag and drop images.
-                      </p>
-                      <p className="text-center text-sm text-gray-600">
-                          Or click to select files
-                      </p>
-                    </div>
-                  </div>
-                </label>  
-              </div>
-          </div>
-            {/* Image upload */}
-
-            {images.length === 0 && (
-              <div className="bg-white rounded-lg p-6 shadow-sm">
-                <h3 className="text-xl text-gray-700 font-semibold mb-4">No image? Try one of these:</h3>
-                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                  {sampleImages.map((url, index) => (
-                    <button
-                      key={index}
-                      onClick={() => handleSampleImageClick(url)}
-                      className="relative aspect-square overflow-hidden rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500"
-                    >
-                      <Image
-                        src={url}
-                        alt={`Sample ${index + 1}`}
-                        className="w-full h-full object-cover"
-                        width={100}
-                        height={100}
-                      />
-                    </button>
-                  ))}
-                </div>
-                <p className="text-sm text-gray-500 mt-4">
-                  All images are processed locally on your device and are not uploaded to any server.
-                </p>
-              </div>
-            )}
-
-            <Images images={images} 
-             onDelete={() => {}} 
-            />
-            {/* <ImageEditor images={images} /> */}
+        {/* Hero Section */}
+        <div className="text-center flex flex-col  mb-4 mx-2">
+          <span className="text-5xl sm:text-7xl pb-6 font-medium bg-gradient-to-b from-[#FAF7FF] to-[#C3C3C7] bg-clip-text text-transparent">
+            Edit Images Privately
+          </span>
+          <p className="text-gray-400 text-lg max-w-2xl mx-auto">
+            Professional-grade image editing powered by AI, running entirely in your browser. 
+            No uploads to server, no compromises.
+          </p>
         </div>
+
+        {/* Features Grid */}
+        <div className="flex flex-wrap justify-center gap-4 mt-4 mb-8">
+            {features.map((feature, index) => (
+              <div key={index} className="flex items-center gap-2 text-sm">
+                <div className="flex items-center justify-center w-8 h-8 rounded-full text-green-400">
+                  {feature.icon}
+                </div>
+                <span className="text-gray-500">
+                  {feature.title}
+                </span>
+              </div>
+            ))}
+          </div>
+
+        {/* Upload Section */}
+        <div className="flex flex-wrap gap-4 w-full justify-center">
+          <div className="flex gap-2">   
+            <div className="flex h-[200px] gap-2 border-[hsl(0,0,17)]">
+              <label
+                htmlFor="image"
+                className="group relative flex w-[600px] h-full cursor-pointer flex-col items-center justify-center rounded-md border border-gray shadow-sm transition-all"
+              >
+                <div
+                  {...getRootProps()}
+                  className="z-[5] rounded-md flex h-full w-full items-center justify-center border-2 border-[hsl(0,0,17)]"                     
+                >
+                  <input {...getInputProps()} className="hidden" />
+                  <div className={`
+                    absolute z-[3] w-full h-full flex flex-col items-center opacity-100 justify-center rounded-md bg-black border-[hsl(0,0,17)] transition-all 
+                    ${isDragAccept ? "border-green-500 bg-green-50" : ""}
+                    ${isDragReject ? "border-red-500 bg-red-50" : ""}
+                    ${isDragActive ? "border-blue-500 bg-blue-50" : "border-gray-300 hover:border-blue-500"}                        
+                  `}>
+                    <Upload className="h-7 w-7 text-gray-500 transition-all duration-75 group-hover:scale-110 group-active:scale-95 opacity-80" />
+                    <p className="mt-2 text-center text-md text-white">
+                      Drag and drop images
+                    </p>
+                    <p className="text-center text-sm text-gray-600">
+                      Or click to select files
+                    </p>
+                  </div>
+                </div>
+              </label>  
+            </div>
+          </div>
+
+          {/* Sample Images Section */}
+          {images.length === 0 && (
+            <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 shadow-sm border border-gray-800">
+              <h3 className="text-xl text-white font-semibold mb-4">No image? Try one of these:</h3>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                {sampleImages.map((url, index) => (
+                  <button
+                    key={index}
+                    onClick={() => handleSampleImageClick(url)}
+                    className="relative aspect-square overflow-hidden rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500"
+                  >
+                    <Image
+                      src={url}
+                      alt={`Sample ${index + 1}`}
+                      className="w-full h-full object-cover"
+                      width={100}
+                      height={100}
+                    />
+                  </button>
+                ))}
+              </div>
+              <p className="text-sm text-gray-400 mt-4">
+                All images are processed locally on your device and are not uploaded to any server.
+              </p>
+            </div>
+          )}
+        </div>
+
+        <Images images={images} onDelete={() => {}} />
       </main>
     </div>
   );

@@ -24,10 +24,10 @@ interface ShineBorderProps {
  * @param children contains react node elements.
  */
 export default function ShineBorder({
-  borderRadius = 8,
-  borderWidth = 1,
+  borderRadius = 10,
+  borderWidth = 2,
   duration = 14,
-  color = "#000000",
+  color = "#fff",
   className,
   children,
 }: ShineBorderProps) {
@@ -39,7 +39,7 @@ export default function ShineBorder({
         } as React.CSSProperties
       }
       className={cn(
-        "relative min-h-[60px] w-fit min-w-[300px] place-items-center rounded-[--border-radius] bg-white p-3 text-black dark:bg-black dark:text-white",
+        "relative  w-fit min-w-[200px] place-items-center rounded-[--border-radius]   text-black dark:bg-black dark:text-white",
         className,
       )}
     >
