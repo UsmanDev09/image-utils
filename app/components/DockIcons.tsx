@@ -4,7 +4,7 @@ import React from "react";
 
 import { Dock, DockIcon } from "@/components/ui/dock";
 import { useTransitionRouter } from 'next-view-transitions'
-import useAppShell, { ImageFile } from "@/store/use-app-shell";
+import useAppShell, { ImageFile } from "@/app/store/use-app-shell";
 
 type IconProps = React.HTMLAttributes<SVGElement>;
 

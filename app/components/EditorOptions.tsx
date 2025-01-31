@@ -1,4 +1,4 @@
-import { ImageFile } from '@/store/use-app-shell';
+import { ImageFile } from '@/app/store/use-app-shell';
 import React, { useEffect, useState,  } from 'react';
 import {
   Accordion,

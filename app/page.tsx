@@ -3,17 +3,26 @@
 import React, { useState, useCallback, useEffect } from "react";
 import { useDropzone } from "react-dropzone";
 import { Images } from "./components/Images";
-import { processImages } from "@/utils/process-images";
-import { initializeModel } from "@/utils/initialize-model";
-import { getModelInfo } from "@/utils/get-model-info";
-import { isMobileSafari } from "@/utils/is-mobile-safari";
+import { processImages } from "@/app/utils/process-images";
+import { initializeModel } from "@/app/utils/initialize-model";
+import { getModelInfo } from "@/app/utils/get-model-info";
+import { isMobileSafari } from "@/app/utils/is-mobile-safari";
 import Image from "next/image";
-import useAppShell from "@/store/use-app-shell";
+import useAppShell from "@/app/store/use-app-shell";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import ColorPicker from "./components/ColorPicker";
-import { Check } from "lucide-react";
+import { Check, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Sparkles, Upload, Lock, Wifi } from "lucide-react";
+import { Feature } from "@/app/store/use-app-shell";
+import { CompressionOptions } from "./components/Compress/CompressOptions";
+import { DEFAULT_QUALITY_SETTINGS } from "./utils/formatDefaults";
+import type { CompressionOptions as CompressionOptionsType, OutputType } from './types';
+import { DropZone } from "./components/Compress/DropZone";
+import { DownloadAll } from "./components/Compress/DownloadAll";
+import { ImageList } from "./components/Compress/ImageList";
+import { useImageQueue } from "@/hooks/use-image-queue";
+
 
 interface AppError {
   message: string;
@@ -24,6 +33,18 @@ export interface ImageFile {
   file: File;
   processedFile?: File;
   isEditing: boolean;
+}
+
+export interface CompressedImageFile {
+  id: string;
+  file: File;
+  preview?: string;
+  status: 'pending' | 'queued' | 'processing' | 'complete' | 'error';
+  error?: string;
+  originalSize: number;
+  compressedSize?: number;
+  outputType?: OutputType;
+  blob?: Blob;
 }
 
 // Sample images from Unsplash
@@ -47,7 +68,7 @@ const features = [
   },
   {
     icon: <Sparkles className="w-6 h-6" />,
-    title: "Single click background removal",
+    title: "Single click background removal and compression",
     description: "Compress images and videos while maintaining quality."
   }
 ];
@@ -58,13 +79,77 @@ export default function App() {
   const [error, setError] = useState<AppError | null>(null);
   const [, setIsWebGPU] = useState(false);
   const [, setIsIOS] = useState(false);
+  const [outputType, setOutputType] = useState<OutputType>('webp');
+  const [compressedImages, setCompressedImages] = useState<CompressedImageFile[]>([]);
   const [currentModel, setCurrentModel] = useState<'briaai/RMBG-1.4' | 'Xenova/modnet'>('briaai/RMBG-1.4');
   const [isModelSwitching, setIsModelSwitching] = useState(false);
 
+  const [options, setOptions] = useState<CompressionOptionsType>({
+    quality: DEFAULT_QUALITY_SETTINGS.webp,
+  });
   const images = useAppShell(state => state.images);
   const addImage = useAppShell(state => state.addImage);
   const updateProcessedImage = useAppShell(state => state.updateProcessedImage);
-  
+  const selectedFeature = useAppShell(state => state.selectedFeature);
+  console.log('sft', selectedFeature)
+  const { addToQueue } = useImageQueue(options, outputType, setCompressedImages);
+
+  const handleOutputTypeChange = useCallback((type: OutputType) => {
+    setOutputType(type);
+    if (type !== 'png') {
+      setOptions({ quality: DEFAULT_QUALITY_SETTINGS[type] });
+    }
+  }, []);
+
+  const handleFilesDrop = useCallback((newImages: CompressedImageFile[]) => {
+    // First add all images to state
+    setCompressedImages((prev) => [...prev, ...newImages]);
+     console.log(compressedImages)
+    // Use requestAnimationFrame to wait for render to complete
+    requestAnimationFrame(() => {
+      // Then add to queue after UI has updated
+      newImages.forEach(image => addToQueue(image.id));
+    });
+  }, [addToQueue]);
+
+  const handleRemoveImage = useCallback((id: string) => {
+    setCompressedImages((prev) => {
+      const image = prev.find(img => img.id === id);
+      if (image?.preview) {
+        URL.revokeObjectURL(image.preview);
+      }
+      return prev.filter(img => img.id !== id);
+    });
+  }, []);
+
+  const handleClearAll = useCallback(() => {
+    compressedImages.forEach(image => {
+      if (image.preview) {
+        URL.revokeObjectURL(image.preview);
+      }
+    });
+    setCompressedImages([]);
+  }, [compressedImages]);
+
+  const handleDownloadAll = useCallback(async () => {
+    const completedImages = compressedImages.filter((img) => img.status === "complete");
+
+    for (const image of completedImages) {
+      if (image.blob && image.outputType) {
+        const link = document.createElement("a");
+        link.href = URL.createObjectURL(image.blob);
+        link.download = `${image.file.name.split(".")[0]}.${image.outputType}`;
+        link.click();
+        URL.revokeObjectURL(link.href);
+      }
+
+      await new Promise((resolve) => setTimeout(resolve, 100));
+    }
+  }, [compressedImages]);
+
+  const completedImages = compressedImages.filter(img => img.status === 'complete').length;
+
+
   useEffect(() => {
     if (isMobileSafari()) {
       window.location.href = 'https://bg-mobile.addy.ie';
@@ -88,6 +173,8 @@ export default function App() {
       setIsLoading(false);
     })();
   }, []);
+
+
 
   const handleModelChange = async (event: React.ChangeEvent<HTMLSelectElement>) => {
     const newModel = event.target.value as typeof currentModel;
@@ -113,28 +200,48 @@ export default function App() {
   };
 
   const onDrop = useCallback(async (acceptedFiles: File[]) => {
-    const newImages = acceptedFiles.map((file, index) => ({
-      id: Date.now() + index,
-      file,
-      processedFile: undefined,
-      isEditing: false
-    }));
+    console.log('sf', selectedFeature)
+    if(selectedFeature === Feature.Compress) {
+      const imageFiles: CompressedImageFile[] = acceptedFiles
+      .filter(file => file.type.startsWith('image/') || file.name.toLowerCase().endsWith('jxl'))
+      .map(file => ({
+        id: crypto.randomUUID(),
+        file,
+        status: 'pending' as const,
+        originalSize: file.size,
+      }));
 
-    newImages.forEach(image => addImage(image));
-    
-    for (const image of newImages) {
-      try {
-        const result = await processImages([image.file]);
-        if (result && result.length > 0) {
-          updateProcessedImage(image.id, result[0]);
-          console.log('result', result[0])
-          console.log('images', images)
+
+
+      console.log('han dle file drop')
+  
+      handleFilesDrop(imageFiles);
+    } else if(selectedFeature === Feature.RemoveBackground) {
+console.log('REMOVIUNG')
+      const newImages = acceptedFiles.map((file, index) => ({
+        id: Date.now() + index,
+        file,
+        processedFile: undefined,
+        isEditing: false
+      }));
+  
+      newImages.forEach(image => addImage(image));
+      
+      for (const image of newImages) {
+        try {
+          const result = await processImages([image.file]);
+          if (result && result.length > 0) {
+            updateProcessedImage(image.id, result[0]);
+            console.log('result', result[0])
+            console.log('images', compressedImages)
+          }
+        } catch (error) {
+          console.error('Error processing image:', error);
         }
-      } catch (error) {
-        console.error('Error processing image:', error);
       }
     }
-  }, [addImage, updateProcessedImage]);
+
+  }, [addImage, updateProcessedImage, selectedFeature]);
 
   const handleSampleImageClick = async (url: string) => {
     try {
@@ -159,8 +266,6 @@ export default function App() {
       "image/*": [".jpeg", ".jpg", ".png", ".mp4"],
     },
   });
-
-  console.log(images)
 
   if (error) {
     return (
@@ -211,20 +316,20 @@ export default function App() {
 
         {/* Features Grid */}
         <div className="flex flex-wrap justify-center gap-4 mt-4 mb-8">
-            {features.map((feature, index) => (
-              <div key={index} className="flex items-center gap-2 text-sm">
-                <div className="flex items-center justify-center w-8 h-8 rounded-full text-green-400">
-                  {feature.icon}
-                </div>
-                <span className="text-gray-500">
-                  {feature.title}
-                </span>
+          {features.map((sF, index) => (
+            <div key={index} className="flex items-center gap-2 text-sm">
+              <div className="flex items-center justify-center w-8 h-8 rounded-full text-green-400">
+                {sF.icon}
               </div>
-            ))}
-          </div>
+              <span className="text-gray-500">
+                {sF.title}
+              </span>
+            </div>
+          ))}
+        </div>
 
         {/* Upload Section */}
-        <div className="flex flex-wrap gap-4 w-full justify-center">
+        <div className="flex flex-col flex-wrap gap-4 w-full justify-center items-center">
           <div className="flex gap-2">   
             <div className="flex h-[200px] gap-2 border-[hsl(0,0,17)]">
               <label
@@ -253,37 +358,73 @@ export default function App() {
                 </div>
               </label>  
             </div>
-          </div>
-
-          {/* Sample Images Section */}
-          {images.length === 0 && (
-            <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 shadow-sm border border-gray-800">
-              <h3 className="text-xl text-white font-semibold mb-4">No image? Try one of these:</h3>
-              <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-                {sampleImages.map((url, index) => (
-                  <button
-                    key={index}
-                    onClick={() => handleSampleImageClick(url)}
-                    className="relative aspect-square overflow-hidden rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500"
-                  >
-                    <Image
-                      src={url}
-                      alt={`Sample ${index + 1}`}
-                      className="w-full h-full object-cover"
-                      width={100}
-                      height={100}
-                    />
-                  </button>
-                ))}
-              </div>
-              <p className="text-sm text-gray-400 mt-4">
-                All images are processed locally on your device and are not uploaded to any server.
-              </p>
-            </div>
-          )}
         </div>
 
-        <Images images={images} onDelete={() => {}} />
+        {/* Sample Images Section */}
+        {(images.length === 0 && selectedFeature === Feature.RemoveBackground)  && (
+          <div className="bg-black/50 backdrop-blur-sm rounded-lg p-6 shadow-sm border border-gray-800">
+            <h3 className="text-xl text-white font-semibold mb-4">No image? Try one of these:</h3>
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+              {sampleImages.map((url, index) => (
+                <button
+                key={index}
+                onClick={() => handleSampleImageClick(url)}
+                className="relative aspect-square overflow-hidden rounded-lg hover:opacity-90 transition-opacity focus:outline-none focus:ring-2 focus:ring-blue-500"
+                >
+                  <Image
+                    src={url}
+                    alt={`Sample ${index + 1}`}
+                    className="w-full h-full object-cover"
+                    width={100}
+                    height={100}
+                    />
+                </button>
+              ))}
+            </div>
+            <p className="text-sm text-gray-400 mt-4">
+              All images are processed locally on your device and are not uploaded to any server.
+            </p>
+          </div>
+        )}
+
+        {selectedFeature === Feature.Compress && (
+          <div className="space-y-6">
+          <CompressionOptions
+            options={options}
+            outputType={outputType}
+            onOptionsChange={setOptions}
+            onOutputTypeChange={handleOutputTypeChange}
+          />
+
+
+          {completedImages > 0 && (
+            <DownloadAll onDownloadAll={handleDownloadAll} count={completedImages} />
+          )}
+
+          <ImageList
+            images={compressedImages} 
+            onRemove={handleRemoveImage} 
+          />
+
+          {compressedImages.length > 0 && (
+            <button
+              onClick={handleClearAll}
+              className="w-full flex items-center justify-center gap-2 px-4 py-2 bg-blue-500 text-white rounded-lg hover:bg-blue-600 transition-colors"
+            >
+              <Trash2 className="w-5 h-5" />
+              Clear All
+            </button>
+          )}
+        </div>
+        )}
+          
+
+        </div>
+
+          {selectedFeature === Feature.RemoveBackground && (
+            <Images images={images} onDelete={() => {}} />
+
+          )}
       </main>
     </div>
   );

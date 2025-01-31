@@ -10,6 +10,12 @@ export interface ImageFile {
     isEditing: boolean;
 }
 
+export enum Feature {
+    RemoveBackground = 'RB',
+    Compress = 'C',
+    Enhance = 'E'
+}
+
 type Store = {
     currentModelId: string;
     isWebGPUSupported: boolean;
@@ -17,6 +23,7 @@ type Store = {
     model?: PreTrainedModel | null,
     processor?: Processor | null,
     images: ImageFile[],
+    selectedFeature: Feature,
     setModel: (model: PreTrainedModel) => void,
     setProcessor: (processor: Processor) => void,
     setIsWebGPUSupported: (isWebGPUSupported: boolean) => void,
@@ -24,8 +31,8 @@ type Store = {
     addImage: (image: ImageFile) => void, // Action to add images
     updateProcessedImage: (id: number, processedFile: File) => void, // Action to update processed image
     updateImageEditing: (id: number, isEditing: boolean) => void,
-
     setImages: (images: ImageFile[]) => void,
+    setSelectedFeature: (selectedFeature: Feature) => void,
 }
 
 // type PersistStore = (
@@ -35,11 +42,12 @@ type Store = {
 
 const useAppShell = create<Store>(
     
-        (set) => ({
+    (set) => ({
         currentModelId: 'briaai/RMBG-1.4',
         isWebGPUSupported: false,
         isIOS: false,
         images: [],
+        selectedFeature: Feature.RemoveBackground,
         setModel: (model: PreTrainedModel) => set(() => ({ model })),
         setProcessor: (processor: Processor) => set(() => ({ processor })),
         setCurrentModelId: (currentModelId: string) => set(() => ({ currentModelId })),
@@ -56,8 +64,10 @@ const useAppShell = create<Store>(
                 image.id === id ? { ...image, isEditing } : image
             )
         })),
-        setImages: (images: ImageFile[]) => set(() => ({ images }))    }), 
-        
+        setSelectedFeature: (selectedFeature: Feature) => set(() => ({ selectedFeature })),
+        setImages: (images: ImageFile[]) => set(() => ({ images }))
+    }), 
+
 )
 
 export default useAppShell;

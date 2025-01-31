@@ -1,6 +1,6 @@
 'use client'
 
-import useAppShell from "@/store/use-app-shell";
+import useAppShell from "@/app/store/use-app-shell";
 import Image from "next/image";
 import CarouselOrientation from "@/app/components/Carousel";
 import EditorOptions from "@/app/components/EditorOptions";

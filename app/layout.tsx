@@ -19,9 +19,10 @@ export default function Layout({ children }: { children: React.ReactNode }) {
       <html lang="en">
         <body className={rubik.className}>
           <Navbar />
-          {children}
+          <main className="pb-20"> {/* Additional padding on main content */}
 
-                            
+          {children}      
+          </main>         
         </body>
       </html>
     </ViewTransitions>
