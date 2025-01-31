@@ -1,4 +1,4 @@
-import type { ImageFile } from '../types';
+import type { ImageFile } from './types';
 
 export function downloadImage(image: ImageFile) {
   if (!image.blob || !image.outputType) return;

@@ -1,4 +1,4 @@
-import type { OutputType } from '../types';
+import type { OutputType } from './types';
 
 // Track WASM module initialization
 const wasmInitialized = new Map<OutputType, boolean>();

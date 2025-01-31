@@ -1,4 +1,4 @@
-import type { FormatQualitySettings } from '../types';
+import type { FormatQualitySettings } from './types';
 
 export const DEFAULT_QUALITY_SETTINGS: FormatQualitySettings = {
   avif: 50,

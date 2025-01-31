@@ -3,8 +3,8 @@ import * as jpeg from '@jsquash/jpeg';
 import * as jxl from '@jsquash/jxl';
 import * as png from '@jsquash/png';
 import * as webp from '@jsquash/webp';
-import type { OutputType, CompressionOptions } from '../types';
-import type { AvifEncodeOptions, JpegEncodeOptions, JxlEncodeOptions, WebpEncodeOptions } from '../types/encoders';
+import type { OutputType, CompressionOptions } from './types';
+import type { AvifEncodeOptions, JpegEncodeOptions, JxlEncodeOptions, WebpEncodeOptions } from './types/index';
 import { ensureWasmLoaded } from './wasm';
 
 export async function decode(sourceType: string, fileBuffer: ArrayBuffer): Promise<ImageData> {
